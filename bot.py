@@ -43,7 +43,7 @@ def welcome(message):
     try:
         user = User.create(telegram_id=message.chat.id)
         bot.send_message(message.chat.id, 'Hey new user', reply_markup=main_menu)
-        schedule.every().day().at(user.notification_time.strftime('%H:%M')).do(
+        schedule.every().day.at(user.notification_time.strftime('%H:%M')).do(
             send_digest, user.telegram_id).tag(user.telegram_id)
     except IntegrityError:
         bot.send_message(message.chat.id, 'Hi again', reply_markup=main_menu)
