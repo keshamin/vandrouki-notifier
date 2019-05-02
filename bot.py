@@ -176,7 +176,7 @@ def create_keyword_group_step2(message):
 
 
 @bot.message_handler(func=lambda message: message.text == M.NOTIFICATIONS_BUTTON)
-def notifications_menu(message):
+def show_notifications_menu(message):
     current_notification_time = User.get(User.telegram_id == message.chat.id).notification_time.strftime('%H:%M')
     bot.send_message(message.chat.id, M.MY_NOTIFICATION_TIME(current_notification_time), reply_markup=notification_menu)
 
@@ -196,9 +196,9 @@ def change_notification_time_step2(message):
         schedule.clear(user.telegram_id)
         schedule.every().day.at(user.notification_time.strftime('%H:%M')).do(
             send_digest, user.telegram_id).tag(user.telegram_id)
-        notifications_menu(message)
+        show_notifications_menu(message)
     except ValueError:
-        bot.send_message(message.chat.id, M.INVALID_TIME_FORMAT)
+        bot.send_message(message.chat.id, M.INVALID_TIME_FORMAT, reply_markup=notification_menu)
 
 
 def send_digest(telegram_id):
