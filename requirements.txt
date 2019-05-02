@@ -1,0 +1,5 @@
+beautifulsoup4==4.6.0
+requests==2.7.0
+pyTelegramBotAPI==3.6.6
+peewee==3.9.5
+schedule==0.6.0
