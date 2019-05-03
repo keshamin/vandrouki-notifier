@@ -1,3 +1,5 @@
+from collections import OrderedDict
+
 from bs4 import BeautifulSoup
 import requests
 from urllib.parse import urljoin
@@ -22,7 +24,7 @@ class VandroukiParser(object):
         return next(self._post_id_and_link_generator)
 
     def collect_posts_links(self, num=1000, until_id=None):
-        result = {}
+        result = OrderedDict()
         i = 0
         post_id = 'post-id'
         while i != num and until_id != post_id:

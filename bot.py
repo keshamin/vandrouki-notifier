@@ -219,8 +219,6 @@ def change_notification_time_step2(message):
 
 
 def send_digest(telegram_id):
-    message = ''
-
     user = User.get(User.telegram_id == telegram_id)
     vp = VandroukiParser(VANDROUKI_URL)
     posts = vp.collect_posts_links(num=20, until_id=user.last_post_seen)
@@ -229,6 +227,12 @@ def send_digest(telegram_id):
                 f'last post: {user.last_post_seen}, '
                 f'collected {len(posts)} post(s)')
 
+    if len(posts) > 0:
+        first_post_id = list(posts.keys())[0]
+        user.last_post_seen = first_post_id
+        user.save()
+
+    message = ''
     for keyword_group in user.keyword_groups:
         appears = False
         for post_link in posts.values():
