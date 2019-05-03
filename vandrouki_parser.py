@@ -26,9 +26,10 @@ class VandroukiParser(object):
     def collect_posts_links(self, num=1000, until_id=None):
         result = OrderedDict()
         i = 0
-        post_id = 'post-id'
-        while i != num and until_id != post_id:
+        while i != num:
             post_id, link = self._get_next_post_id_and_link()
+            if until_id == post_id:
+                break
             i += 1
             result[post_id] = link
         return result
