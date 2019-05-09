@@ -5,6 +5,37 @@ import requests
 from urllib.parse import urljoin
 
 
+class Post(object):
+    def __init__(self, post_id, link, title, content):
+        self.post_id = post_id
+        self.link = link
+        self.title = title
+        self.content = content
+
+    @classmethod
+    def from_link(cls, link):
+        response = requests.get(link)
+        if response.status_code != 200:
+            raise Exception('Failed to get a page.')
+
+        soup = BeautifulSoup(response.text, 'html.parser')
+        post_id = soup.find('div', 'type-post')['id']
+        post_title = str(soup.find('h1', 'entry-title').string)
+        post_content = str(soup.find('div', 'entry-content'))
+        return Post(post_id, link, post_title, post_content)
+
+    def contains_keywords(self, keywords_list):
+        found = False
+
+        for keyword in keywords_list:
+            if found:
+                break
+            keyword = keyword.lower()
+            if keyword in self.content.lower() or keyword in self.title.lower():
+                found = True
+        return found
+
+
 class VandroukiParser(object):
 
     def __init__(self, vandrouki_url):
