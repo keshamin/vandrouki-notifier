@@ -4,7 +4,7 @@ from telebot import TeleBot, types
 from config import TOKEN, VANDROUKI_URL, ADMIN_ID
 import schedule
 import threading
-from vandrouki_parser import VandroukiParser
+from vandrouki_parser import VandroukiParser, Post
 
 from database import *
 from messages import M
@@ -221,33 +221,38 @@ def change_notification_time_step2(message):
 def send_digest(telegram_id):
     user = User.get(User.telegram_id == telegram_id)
     vp = VandroukiParser(VANDROUKI_URL)
-    posts = vp.collect_posts_links(num=20, until_id=user.last_post_seen)
+    post_id_links = vp.collect_posts_links(num=20, until_id=user.last_post_seen)
 
     logger.info(f'Collecting posts for user {telegram_id}, '
                 f'last post: {user.last_post_seen}, '
-                f'collected {len(posts)} post(s)')
+                f'collected {len(post_id_links)} post(s)')
 
-    if len(posts) > 0:
-        first_post_id = list(posts.keys())[0]
+    if len(post_id_links) > 0:
+        first_post_id = list(post_id_links.keys())[0]
         user.last_post_seen = first_post_id
         user.save()
 
-    message = ''
-    for keyword_group in user.keyword_groups:
-        appears = False
-        for post_link in posts.values():
-            if vp.post_contains_keywords(post_url=post_link,
-                                         keywords_list=[kw.keyword for kw in keyword_group.keywords]):
-                if not appears:
-                    message += '*{}*\n'.format(keyword_group.group_name)
-                    appears = True
+    posts_by_groups = {}
+    for link in post_id_links.values():
+        post = Post.from_link(link)
+        for keyword_group in user.keyword_groups:
+            if post.contains_keywords(keywords_list=[kw.keyword for kw in keyword_group.keywords]):
+                if keyword_group.group_name not in posts_by_groups:
+                    posts_by_groups[keyword_group.group_name] = []
 
-                message += post_link + '\n'
-        message += '\n'
+                posts_by_groups[keyword_group.group_name].append(post)
 
-    if len(message.strip()) > 0:
+    if len(posts_by_groups) > 0:
         logger.info(f'Found match, sending digest to user {telegram_id}.')
+        message = ''
+        for group_name, group_posts in posts_by_groups.items():
+            message += f'*{group_name}*\n'
+            for i, post in enumerate(group_posts):
+                message += f'{i + 1}) [{post.title}]({post.link})\n'
+            message += '\n'
         bot.send_message(telegram_id, message, parse_mode='Markdown')
+    else:
+        logger.info(f'No posts found for user {telegram_id}.')
 
 
 def run_pending_and_sleep():
