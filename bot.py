@@ -135,7 +135,7 @@ def remove_keywords_step2(message, group_name):
 @bot.callback_query_handler(func=lambda cb: cb.data.startswith('remove_group'))
 @handler_log
 def remove_group_step1(cb):
-    group_name = cb.data.split()[1]
+    group_name = cb.data.lstrip('remove_group ')
     group = KeywordGroup.get_or_none(KeywordGroup.owner_id == cb.message.chat.id,
                                      KeywordGroup.group_name == group_name)
     if group is not None:
