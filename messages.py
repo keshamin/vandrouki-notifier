@@ -54,7 +54,7 @@ class M(object):
     @staticmethod
     def NO_SUCH_GROUP(group=None):
         if group:
-            return 'Группы ключевых слов *{}* не существует!'
+            return 'Группы ключевых слов {} не существует!'.format(group)
         else:
             return 'Такой группы не существует'
 
