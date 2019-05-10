@@ -269,4 +269,5 @@ for user in User.select():
 thread = threading.Thread(target=run_pending_and_sleep, daemon=True)
 thread.start()
 
+logger.info(f'Bot started as {bot.get_me().username}')
 bot.polling()
