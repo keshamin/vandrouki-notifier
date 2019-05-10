@@ -1,9 +1,11 @@
 from peewee import *
 from datetime import time
 
+from config import DB_PATH
+
 
 # pragmas parameter is necessary for correct behavior of foreign keys in SQLite
-db = SqliteDatabase('vandrouki_db.sqlite', pragmas={'foreign_keys': 1})
+db = SqliteDatabase(DB_PATH, pragmas={'foreign_keys': 1})
 db.connect()
 
 
