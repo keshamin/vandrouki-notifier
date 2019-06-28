@@ -1,16 +1,20 @@
 from time import sleep
 from datetime import datetime
-from telebot import TeleBot, types
-from config import TOKEN, VANDROUKI_URL, ADMIN_ID
-import schedule
-import threading
-from vandrouki_parser import VandroukiParser, Post
 
+from pytz import utc
+from telebot import TeleBot, types
+import threading
+import argparse
+
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.cron import CronTrigger
+
+from vandrouki_parser import VandroukiParser, Post
 from database import *
 from messages import M
 from markups import main_menu, kw_groups_keyboard, inline_kw_group_markup, yes_no_markup, notification_menu
-import argparse
 from log import logger, handler_log
+from config import TOKEN, VANDROUKI_URL, ADMIN_ID
 
 
 # If configs are default they must be specified as cli args
@@ -32,6 +36,7 @@ if admin_id_required:
 
 
 bot = TeleBot(TOKEN)
+scheduler = BackgroundScheduler(timezone=utc)
 
 
 @bot.message_handler(func=lambda message: message.chat.id != ADMIN_ID)
@@ -46,8 +51,13 @@ def welcome(message):
     try:
         user = User.create(telegram_id=message.chat.id)
         bot.send_message(message.chat.id, 'Hey new user', reply_markup=main_menu)
-        schedule.every().day.at(user.notification_time.strftime('%H:%M')).do(
-            send_digest, user.telegram_id).tag(user.telegram_id)
+
+        scheduler.add_job(
+            trigger=CronTrigger(hour=user.notification_time.hour, minute=user.notification_time.minute),
+            func=send_digest,
+            args=(user.telegram_id, ),
+            id=user.telegram_id
+        )
     except IntegrityError:
         bot.send_message(message.chat.id, 'Hi again', reply_markup=main_menu)
 
@@ -210,9 +220,11 @@ def change_notification_time_step2(message):
         user = User.get(User.telegram_id == message.chat.id)
         user.notification_time = new_time
         user.save()
-        schedule.clear(user.telegram_id)
-        schedule.every().day.at(user.notification_time.strftime('%H:%M')).do(
-            send_digest, user.telegram_id).tag(user.telegram_id)
+
+        scheduler.get_job(job_id=user.telegram_id).modify(
+            trigger=CronTrigger(hour=user.notification_time.hour, minute=user.notification_time.minute)
+        )
+
         show_notifications_menu(message)
     except ValueError:
         bot.send_message(message.chat.id, M.INVALID_TIME_FORMAT, reply_markup=notification_menu)
@@ -255,19 +267,13 @@ def send_digest(telegram_id):
         logger.info(f'No posts found for user {telegram_id}.')
 
 
-def run_pending_and_sleep():
-    while True:
-        schedule.run_pending()
-        sleep(1)
-
-
 for user in User.select():
-    schedule.every().day.at(user.notification_time.strftime('%H:%M')).do(
-        send_digest, user.telegram_id).tag(user.telegram_id)
-
-
-thread = threading.Thread(target=run_pending_and_sleep, daemon=True)
-thread.start()
+    scheduler.add_job(
+        trigger=CronTrigger(hour=user.notification_time.hour, minute=user.notification_time.minute),
+        func=send_digest,
+        args=(user.telegram_id,),
+        id=user.telegram_id
+    )
 
 logger.info(f'Bot started as {bot.get_me().username}')
 bot.polling()
