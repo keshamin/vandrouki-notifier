@@ -36,30 +36,87 @@ if admin_id_required:
 
 
 bot = TeleBot(TOKEN)
+whitelist = set([user.telegram_id for user in User.select()])
 scheduler = BackgroundScheduler(timezone=utc)
 
 
-@bot.message_handler(func=lambda message: message.chat.id != ADMIN_ID)
+@bot.message_handler(func=lambda message: message.chat.id != ADMIN_ID and
+                                          message.chat.id not in whitelist)
 @handler_log
 def permission_denied(message):
-    bot.send_message(message.chat.id, M.PERMISSION_DENIED)
+    request, created = NewUserRequest.get_or_create(telegram_id=message.chat.id)
+    if created:
+        bot.send_message(message.chat.id, M.ACCESS_REQUEST_CREATED)
+        bot.send_message(ADMIN_ID, f'Новая заявка на доступ: @{request.username} (ID: {request.telegram_id}).')
+    else:
+        bot.send_message(message.chat.id, M.YOUR_ACCESS_REQUEST_PENDING)
 
 
-@bot.message_handler(commands=['start'])
-@handler_log
-def welcome(message):
-    try:
-        user = User.create(telegram_id=message.chat.id)
-        bot.send_message(message.chat.id, 'Hey new user', reply_markup=main_menu)
+def create_new_user_if_not_exist(telegram_id, username):
+    if telegram_id not in whitelist:
+        user = User.create(telegram_id=telegram_id, username=username)
+        whitelist.add(telegram_id)
 
         scheduler.add_job(
             trigger=CronTrigger(hour=user.notification_time.hour, minute=user.notification_time.minute),
             func=send_digest,
             args=(user.telegram_id, ),
-            id=user.telegram_id
+            id=str(user.telegram_id)
         )
-    except IntegrityError:
-        bot.send_message(message.chat.id, 'Hi again', reply_markup=main_menu)
+
+
+def send_help(telegram_id):
+    bot.send_message(telegram_id, M.HELP, reply_markup=main_menu)
+
+
+@bot.message_handler(commands=['help'])
+@handler_log
+def help_handler(message):
+    send_help(message.chat.id)
+
+
+@bot.message_handler(commands=['start'])
+@handler_log
+def welcome(message):
+    create_new_user_if_not_exist(message.chat.id, message.from_user.username)
+    send_help(message.chat.id)
+
+
+@bot.message_handler(commands=['add_user'], func=lambda message: message.chat.id == ADMIN_ID)
+@handler_log
+def add_user_to_whitelist_step1(message):
+    bot.send_message(message.chat.id, M.ENTER_REQUEST_ID)
+    bot.register_next_step_handler(message, add_user_to_whitelist_step2)
+
+
+@handler_log
+def add_user_to_whitelist_step2(message):
+    telegram_id = message.text.strip()
+    request = NewUserRequest.get_or_none(telegram_id=telegram_id)
+    if request is not None:
+        create_new_user_if_not_exist(telegram_id=request.telegram_id, username=request.username)
+        send_help(request.telegram_id)
+        request.delete_instance()
+        bot.send_message(message.chat.id, M.USER_CREATED)
+    else:
+        bot.send_message(message.chat.id, M.NO_SUCH_REQUEST)
+
+
+@bot.message_handler(func=lambda message: message.chat.id == ADMIN_ID,
+                     commands=['show_requests'])
+@handler_log
+def show_requests(message):
+    reply_message = M.REQUESTS_LIST_HEADING
+
+    i = 0
+    for request in NewUserRequest.select():
+        i += 1
+        reply_message += f'{i}) ID: {request.telegram_id}, Username: {request.username}\n'
+
+    if i == 0:
+        bot.send_message(message.chat.id, M.NO_ANY_REQUEST)
+    else:
+        bot.send_message(message.chat.id, reply_message)
 
 
 @bot.message_handler(func=lambda message: message.text == M.MAIN_MENU_BUTTON)
@@ -272,7 +329,7 @@ for user in User.select():
         trigger=CronTrigger(hour=user.notification_time.hour, minute=user.notification_time.minute),
         func=send_digest,
         args=(user.telegram_id,),
-        id=user.telegram_id
+        id=str(user.telegram_id)
     )
 
 logger.info(f'Bot started as {bot.get_me().username}')

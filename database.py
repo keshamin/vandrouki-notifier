@@ -11,6 +11,7 @@ db.connect()
 
 class User(Model):
     telegram_id = IntegerField(primary_key=True)
+    username = CharField()
     notification_time = TimeField(default=time(hour=12))
     last_post_seen = CharField(null=True)
 
@@ -56,4 +57,13 @@ class Keyword(Model):
         primary_key = CompositeKey('parent_group', 'keyword')
 
 
-db.create_tables([User, KeywordGroup, Keyword])
+class NewUserRequest(Model):
+    telegram_id = IntegerField(primary_key=True)
+    username = CharField()
+    application_time = TimestampField()
+
+    class Meta:
+        database = db
+
+
+db.create_tables([User, KeywordGroup, Keyword, NewUserRequest])

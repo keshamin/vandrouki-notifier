@@ -13,6 +13,13 @@ class M(object):
     NO_BUTTON = 'Нет'
     PERMISSION_DENIED = 'В данный момент публичный доступ закрыт.\n' \
                         'Для получения доступа обратитесь к автору (@keshamin).'
+    ACCESS_REQUEST_CREATED = 'В данный момент публичный доступ закрыт.\n' \
+                             'Ваша заявка на доступ отправлена администратору (@keshamin).'
+    YOUR_ACCESS_REQUEST_PENDING = 'Ваша заявка на доступ ожидает решения администратора (@keshamin).'
+
+    # TODO: Create a manual text
+    HELP = '''Инструкция по использованию в разработке ⚠️
+    '''
 
     # --- Main menu ---
     KEYWORDS_BUTTON = 'Ключевые слова'
@@ -30,7 +37,6 @@ class M(object):
     NO_KW_GROUP_YET = 'Вы еще не создали ни одной группы ключевых слов.'
     KW_GROUPS_LIST = 'Вот список ваших групп ключевых слов:'
     GROUP_KEYWORDS = 'Ключевые слова:'
-
 
     @staticmethod
     def ENTER_KW_TO_ADD(group):
@@ -82,3 +88,11 @@ class M(object):
 
     ENTER_NEW_NOTICATION_TIME = 'Введите новое время уведомлений в формате ЧЧ:ММ.'
     INVALID_TIME_FORMAT = 'Некорректный формат времени.'
+
+    # --- Admin ---
+    ENTER_REQUEST_ID = 'Введите ID заявки.'
+    NO_SUCH_REQUEST = 'Нет заявки с таким ID.'
+    USER_CREATED = 'Пользователь создан!'
+    REQUESTS_LIST_HEADING = 'Список заявок:\n'
+    NO_ANY_REQUEST = 'Список заявок пуст.'
+
