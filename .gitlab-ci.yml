@@ -4,6 +4,7 @@ stages:
 
 build:
   stage: build
+  image: docker:stable
   script:
     - git clone https://github.com/keshamin/vandrouki-notifier.git
     - cd vandrouki-notifier
