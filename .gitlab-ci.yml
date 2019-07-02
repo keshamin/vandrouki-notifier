@@ -1,0 +1,13 @@
+stages:
+  - build
+  - deploy
+
+build:
+  stage: build
+  script:
+    - git clone https://github.com/keshamin/vandrouki-notifier.git
+    - cd vandrouki-notifier
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - docker build -t $CI_REGISTRY/keshamin/vandrouki-notifier:dev-latest .
+    - docker push $CI_REGISTRY/keshamin/vandrouki-notifier:dev-latest
+
